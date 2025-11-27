@@ -1,0 +1,8 @@
+- name: use roles to deploy app
+  hosts: web
+  vars:
+    pkg: nginx
+    appservice: nginx
+    fport: 80
+  roles:
+    - web

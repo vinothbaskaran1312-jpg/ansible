@@ -1,0 +1,27 @@
+- name: install and configure apache web server
+  hosts: web
+  tasks:
+    - name: install httpd app
+      dnf:
+        name: httpd
+        state: latest
+    - name: create/copy home page
+      copy:
+        content: " This web page created using ansibel Playbook task"
+        dest: /var/www/html/index.html
+    - name: enable service and auto restart
+      tags:
+        - configure
+        - web
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+
+    - name: open firewall port 80
+      ansible.posix.firewalld:
+        service: http
+        state: enabled
+        immediate: yes
+        permanent: 1

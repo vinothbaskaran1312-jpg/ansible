@@ -1,0 +1,6 @@
+#YAML intro
+# <key>: <value>
+team: csk
+city: "chennai"
+year: 2008
+is_current_champ: true

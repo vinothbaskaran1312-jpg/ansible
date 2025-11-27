@@ -1,0 +1,9 @@
+#create user called sales1
+- name: p1 - created user account in all managed node
+  hosts: all
+  tasks:
+    - name: create user sales1
+      ansible.builtin.user:
+        name: sales1
+        state: present
+        comment: "sales manager"

@@ -1,0 +1,19 @@
+- name: install devecot package wdbeb server when memory 4Gb and above
+  hosts: web
+  tasks:
+    - name: install devecot
+      package: 
+        name: devecot
+        state: absent
+      when: ansible_memtotal_mb <= 4096
+    - name: install nginx in redhat OS
+      dnf:
+        name: nginx
+        state: latest
+      when: ansible_os_family == "Redhat"
+    - name: install httpd in ubuntu module
+      apt:
+        name: httpd
+        state: latest
+      when: ansible_os_family== "debian"
+    

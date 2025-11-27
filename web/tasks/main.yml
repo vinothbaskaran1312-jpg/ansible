@@ -1,0 +1,12 @@
+---
+# tasks file for web
+- name: some task to do in web role
+  copy: 
+    content: "server deploying..."
+    dest: /tmp/status.txt
+- name: import task install
+  ansible.builtin.import_tasks: ./install.yml
+- name: import task server start 
+  ansible.builtin.import_tasks: ./service.yml
+- name: import task server start 
+  ansible.builtin.import_tasks: ./firewallport.yml

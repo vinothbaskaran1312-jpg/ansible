@@ -1,0 +1,11 @@
+ "ansible_distribution": "Rocky",
+        "ansible_distribution_file_parsed": true,
+        "ansible_distribution_file_path": "/etc/redhat-release",
+        "ansible_distribution_file_variety": "RedHat",
+        "ansible_distribution_major_version": "9",
+        "ansible_distribution_release": "Blue Onyx",
+        "ansible_distribution_version": "9.6",
+        "ansible_dns": {
+
+          "ansible_memtotal_mb" more than 4GB RAM
+current gathered fact:     ansible_memtotal_mb  3655  
