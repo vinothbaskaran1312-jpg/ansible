@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    environment {
+        GIT_REPO = "https://github.com/abdulshajahan/docker.git"
+        GIT_CREDENTIALS_ID = "git"  // Add this in Jenkins if repo is private
+        DOCKER_CREDENTIALS_ID = "dockerid" //add this in Jenkins
+        APP_NAME = 'docker.io/shajahanak/webdec25'
+
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                sh 'rm -rf repo && git clone ${GIT_REPO} repo'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "cd repo && docker build -t ${APP_NAME} -f ./docker/3.2nginx.dockerfile ."
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: DOCKER_CREDENTIALS_ID, url: "https://index.docker.io/v1/"]) {
+                        sh "echo 'Docker Login Successful'"
+                    }
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                script {
+                    sh "docker push ${APP_NAME}"
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh "docker rmi ${APP_NAME}:latest"
+            }
+        }
+    }
+}

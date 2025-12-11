@@ -1,0 +1,136 @@
+pipeline {
+    agent { label "jmaster" }
+
+    environment {
+        GIT_REPO = "https://github.com/abdulshajahan/docker.git"
+        GIT_CREDENTIALS_ID = "git"  // Jenkins credentials ID for Git
+        DOCKER_CREDENTIALS_ID = "docpass" // Jenkins credentials ID for Docker Hub
+        
+        // IMPORTANT: Repository MUST exist on Docker Hub first!
+        DOCKERHUB_USERNAME = "shajahanak"  // Your Docker Hub username
+        REPO_NAME = "web3dec25"            // Repository name
+        APP_NAME = "docker.io/${DOCKERHUB_USERNAME}/${REPO_NAME}"
+        
+        // Optional: Add build number tag
+        DOCKER_TAG = "build-${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Verify Setup') {
+            steps {
+                script {
+                    echo "=== CONFIGURATION ==="
+                    echo "Git Repo: ${GIT_REPO}"
+                    echo "Docker Image: ${APP_NAME}"
+                    echo "Docker Tag: ${DOCKER_TAG}"
+                    echo "Jenkins Build: ${BUILD_NUMBER}"
+                }
+            }
+        }
+
+        stage('Clone Repository') {
+            steps {
+                // Use git step with credentials if private repo
+                git branch: 'main',
+                    url: "${GIT_REPO}",
+                    credentialsId: "${GIT_CREDENTIALS_ID}",
+                    poll: false
+                
+                // OR if public repo, simpler:
+                // git url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build with tag
+                    sh """
+                        docker build -t ${APP_NAME}:${DOCKER_TAG} -f ./3.2nginx.dockerfile .
+                        docker tag ${APP_NAME}:${DOCKER_TAG} ${APP_NAME}
+                        echo "✅ Built: ${APP_NAME}:${DOCKER_TAG}"
+                    """
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    // FIXED: Correct withDockerRegistry syntax
+                    docker.withRegistry("https://index.docker.io/v1/", "${DOCKER_CREDENTIALS_ID}") {
+                        // This automatically logs in
+                        sh "echo '✅ Docker Login Successful'"
+                        
+                        // Verify login
+                        sh """
+                            docker info | grep -i username || true
+                            echo "Logged in to Docker Hub"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                script {
+                    // Push with build tag first
+                    sh """
+                        echo "Pushing ${APP_NAME}:${DOCKER_TAG}..."
+                        docker push ${APP_NAME}:${DOCKER_TAG}
+                    """
+                    
+                    // Push latest tag
+                    sh """
+                        echo "Pushing ${APP_NAME}:latest..."
+                        docker push ${APP_NAME}:latest
+                    """
+                    
+                    echo "✅ Successfully pushed to Docker Hub!"
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    sh """
+                        # Remove local images
+                        docker rmi ${APP_NAME}:${DOCKER_TAG} || true
+                        docker rmi ${APP_NAME}:latest || true
+                        
+                        # Clean Docker cache
+                        docker system prune -f
+                        
+                        echo "✅ Cleanup completed"
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                echo "𐎉 Pipeline completed successfully!"
+                echo "𐃦 Docker Image: ${APP_NAME}:${DOCKER_TAG}"
+                echo "𐄗 View at: https://hub.docker.com/r/${DOCKERHUB_USERNAME}/${REPO_NAME}"
+            }
+        }
+        failure {
+            script {
+                echo "❌ Pipeline failed!"
+                echo "Troubleshooting steps:"
+                echo "1. Create repository manually: https://hub.docker.com/repository/create"
+                echo "2. Name: ${REPO_NAME}, Owner: ${DOCKERHUB_USERNAME}"
+                echo "3. Ensure Docker Hub PAT has WRITE permissions"
+                echo "4. Test manually: docker login && docker push ${APP_NAME}:test"
+            }
+        }
+        always {
+            // Clean workspace
+            cleanWs()
+        }
+    }
+}

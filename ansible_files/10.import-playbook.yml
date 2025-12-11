@@ -1,0 +1,5 @@
+#import playbooks
+- name: deploy frontend webserver
+  ansible.builtin.import_playbook: "4.webserver.yml"
+- name: deploy backend dbservers
+  ansible.builtin.import_playbook: "5.mariadb-install.yml"

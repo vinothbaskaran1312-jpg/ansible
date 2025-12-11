@@ -1,0 +1,21 @@
+pipeline {
+    agent { label 'master' }
+    stages {
+        stage('SCM Checkout') {
+            steps {
+                git branch: 'main', 
+                     changelog: false, 
+                     credentialsId: 'git', 
+                     poll: false, 
+                     url: 'https://github.com/abdulshajahan/ansiblenov25.git'
+            }
+        }
+        stage('ExecuteABook') {
+            steps {
+                ansiblePlaybook installation: 'ansible', 
+                              playbook: '3.diskreport.yaml', 
+                              vaultTmpPath: ''
+            }
+        }
+    }
+}

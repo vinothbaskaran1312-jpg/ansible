@@ -1,0 +1,8 @@
+deploy: 
+  projname: prod-cdc
+  ns: prod
+  replicas: 4
+service:
+  sname: app-prod
+  ns: prod
+  port: 50101

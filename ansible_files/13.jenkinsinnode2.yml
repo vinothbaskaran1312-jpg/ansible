@@ -1,0 +1,166 @@
+---
+- name: Install and configure Jenkins on CentOS 9
+  hosts: node2
+  become: true
+  vars:
+    jenkins_port: 8080
+    jenkins_http_listen_address: "0.0.0.0"
+  tasks:
+    - name: Update package cache
+      dnf:
+        update_cache: true
+
+    - name: Install required dependencies
+      dnf:
+        name:
+          - wget
+          - git
+          - fontconfig
+          - java-17-openjdk-devel
+        state: present
+       
+    - name: Add Jenkins repository key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+        state: present
+       
+    - name: Add Jenkins repository
+      yum_repository:
+        name: jenkins
+        description: Jenkins Repository
+        baseurl: https://pkg.jenkins.io/redhat-stable
+        gpgcheck: true
+        gpgkey: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+       
+    - name: Install Jenkins
+      dnf:
+        name: jenkins
+        state: present
+
+    # - name: Ensure Jenkins configuration directory exists
+    #   file:
+    #     path: /etc/sysconfig
+    #     state: directory
+    #     mode: '0755'
+      
+    # - name: Create Jenkins configuration file if it doesn't exist
+    #   copy:
+    #     content: |
+    #       # Jenkins configuration file
+    #       JENKINS_HOME="/var/lib/jenkins"
+    #       JENKINS_USER="jenkins"
+    #       JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=true"
+    #       JENKINS_PORT="{{ jenkins_port }}"
+    #       JENKINS_LISTEN_ADDRESS="{{ jenkins_http_listen_address }}"
+    #     dest: /etc/sysconfig/jenkins
+    #     owner: root
+    #     group: root
+    #     mode: '0644'
+    #   notify: restart jenkins
+        
+    - name: Start and enable Jenkins service
+      systemd:
+        name: jenkins
+        state: started
+        enabled: true
+        daemon_reload: true
+      
+    - name: Wait for Jenkins to start (first attempt)
+      wait_for:
+        port: "{{ jenkins_port }}"
+        host: "127.0.0.1"
+        delay: 10
+        timeout: 120
+        state: started
+      ignore_errors: true
+       
+    - name: Check if Jenkins is running
+      systemd:
+        name: jenkins
+        state: started
+      register: jenkins_service_status
+       
+    - name: Restart Jenkins if first start failed
+      systemd:
+        name: jenkins
+        state: restarted
+      when: jenkins_service_status is failed
+      notify: wait for jenkins fully started
+       
+    - name: Configure firewall for Jenkins
+      firewalld:
+        port: "{{ jenkins_port }}/tcp"
+        permanent: true
+        state: enabled
+      notify: reload firewalld
+       
+    - name: Wait for initial admin password file to be created
+      wait_for:
+        path: /var/lib/jenkins/secrets/initialAdminPassword
+        timeout: 60
+      when: jenkins_service_status is success
+       
+    - name: Display initial admin password
+      shell: |
+        if [ -f /var/lib/jenkins/secrets/initialAdminPassword ]; then
+          cat /var/lib/jenkins/secrets/initialAdminPassword
+        else
+          echo "Initial admin password file not found. Jenkins may still be starting up."
+        fi
+      register: jenkins_initial_password
+      changed_when: false
+       
+    - name: Show access information
+      debug:
+        msg: |
+          Jenkins installation completed!
+          Access URL: http://{{ ansible_host }}:{{ jenkins_port }}
+          {% if jenkins_initial_password.stdout != "Initial admin password file not found. Jenkins may still be starting up." %}
+          Initial admin password: {{ jenkins_initial_password.stdout }}
+          {% else %}
+          Initial admin password: File not ready yet. Please check manually with: sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+          {% endif %}
+         
+  handlers:
+    - name: restart jenkins
+      systemd:
+        name: jenkins
+        state: restarted
+       
+    - name: wait for jenkins fully started
+      wait_for:
+        port: "{{ jenkins_port }}"
+        host: "127.0.0.1"
+        delay: 15
+        timeout: 90
+       
+    - name: reload firewalld
+      systemd:
+        name: firewalld
+        state: reloaded
+
+- name: configure Ansible Master 
+  hosts: master #localhost - ansible master
+  tasks:
+    - name: create jenkins JENKINS_USER
+      ansible.builtin.user:
+        name: jenkins 
+        state: present
+        ssh_key_bits: 4096
+        ssh_key_type: rsa
+         
+    
+- name: setup jenkins passwordless key, and provide sudo
+  hosts: allservers #all managed nodes
+  tasks:
+    - name: enable keybased auth/passwordless auth (ssh-copy-id)
+      ansible.posix.authorized_key:
+        user: auto1
+        state: present
+        key: "{{ lookup('file', '/home/jenkins/.ssh/id_rsa.pub') }}"
+    - name: grant sudo by adding in /etc/sudoers.d/admins
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/admins
+        line: "jenkins ALL=(ALL) NOPASSWD: ALL"
+        state: present
+        create: yes

@@ -1,0 +1,11 @@
+#create user called sales1
+- name: p1 - create user account in all managed node
+  hosts: allservers
+  tasks:
+    - name: create user sales1
+      ansible.builtin.user:
+        name: sales1
+        state: present
+        comment: "sales manager"
+#  ansible-playbook ./2.usercreate.yml --syntax-check
+#  ansible-playbook ./2.usercreate.yml  

@@ -1,0 +1,31 @@
+#install web server, create / copy homepage, enable service autostart, start service, open firewall
+- name: install and configure apache web server
+  hosts: web
+  tasks:
+    - name: install httpd app
+      dnf:
+        name: httpd
+        state: latest
+      when: ansible_distribution == "Rocky2"
+    - name: create/copy home page
+      #ignore_errors: false
+      copy:
+        #src: homepage.html #create hp in master node
+        content: "This web page created using ansible PB task"
+        dest: /var/www/html/index.html
+    - name: start service and enable
+      tags:
+        - configure
+        - web
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+    - name: open firewall port 80
+      ansible.posix.firewalld:
+        service: http
+        #port: 80/tcp
+        state: enabled
+        immediate: yes
+        permanent: 1
+

@@ -1,0 +1,28 @@
+- name: copy hosts file to all managed nodes
+  hosts: allservers
+  tasks:
+    - name: copy hosts file
+      copy:
+        src: hostsfile
+        dest: /etc/hosts
+        backup: yes
+    - name: automation account auto1
+      ansible.builtin.user:
+        name: auto1
+        state: present
+    - name: grant sudo by adding in /etc/sudoers.d/admins
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/admins
+        line: "auto1 ALL=(ALL) NOPASSWD: ALL"
+        state: present
+        create: yes
+    - name: enable keybased auth/passwordless auth (ssh-copy-id)
+      ansible.posix.authorized_key:
+        user: auto1
+        state: present
+        key: "{{ lookup('file', '/home/student/.ssh/id_rsa.pub') }}"
+
+# ansible allservers -m copy -a 'src=hostsfile dest=/etc/hosts backup=yes' -u targetusername -k -b
+# ansible allservers -m user -a 'name=auto2 state=present' -u targetusername -k -b
+# ansible allservers -m lineinfile -a "path=/etc/sudoers.d/admins line='auto2 ALL=(ALL) NOPASSWD: ALL' state=present" -u targetusername -k -b
+# ansible allservers -m ansible.posix.authorized_key -a 'user=auto2 key='"{{ lookup('file', '/home/student/.ssh/id_rsa.pub') }}" state=presnt' -u targetusername -k -b

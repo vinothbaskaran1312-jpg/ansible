@@ -1,0 +1,7 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.0.15.141 master master.example.com
+10.0.15.142 node1 node1.example.com
+10.0.15.143 node2 node2.example.com
+8.8.8.8 dns.google.com
+10.0.15.1 trainer

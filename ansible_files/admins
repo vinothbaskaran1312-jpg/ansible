@@ -1,0 +1,2 @@
+devops ALL=(ALL) NOPASSWD: ALL
+auto1 ALL=(ALL) NOPASSWD: ALL

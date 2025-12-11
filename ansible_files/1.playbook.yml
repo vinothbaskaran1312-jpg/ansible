@@ -1,0 +1,15 @@
+#playbook is collection of plays
+- name: play1 - get some data
+  hosts: all #mandatory fied req. use , to supply multiple inv group
+  tasks: #actions to perform
+    - name: task1
+      copy: #use copy module
+        src: /etc/hosts
+        dest: /tmp/test.txt
+    - name: task2 install appp
+      dnf:
+        name: htop
+        state: latest    
+- name: play2 for installing an app
+  hosts: 2ndhostgroup
+- name: play3 - debug
